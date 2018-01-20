@@ -14,12 +14,24 @@ exports.createUser = functions.https.onRequest((request, response) => {
       email: request.query.email,
       password: request.query.password,
       uid: request.query.uid,
-    }).then(userRecord => {
-      // See the UserRecord reference doc for the contents of userRecord.
+    })
+    .then(userRecord => {
       response.send(userRecord);
     })
     .catch(error => {
-      response.send("Error creating new user:" + error);
+      response.send('Error creating new user:' + error);
+    });
+  });
+});
+
+exports.deleteUser = functions.https.onRequest((request, response) => {
+  cors(request, response, () => {
+    admin.auth().deleteUser(request.query.uid)
+    .then(userRecord => {
+      response.send('Successfully deleted user');
+    })
+    .catch(error => {
+      response.send('Error deleting user:' + error);
     });
   });
 });
