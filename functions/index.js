@@ -35,3 +35,18 @@ exports.deleteUser = functions.https.onRequest((request, response) => {
     });
   });
 });
+
+exports.updateUser = functions.https.onRequest((request, response) => {
+  cors(request, response, () => {
+    admin.auth().updateUser(request.query.uid, {
+      email: request.query.email,
+      password: request.query.password
+    })
+    .then(userRecord => {
+      response.send('Successfully updated user');
+    })
+    .catch(error => {
+      response.send('Error updating user:' + error);
+    });
+  });
+});
