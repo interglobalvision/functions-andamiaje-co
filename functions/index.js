@@ -5,9 +5,7 @@ const cors = require('cors')({origin: true});
 const admin = require('firebase-admin');
 admin.initializeApp(functions.config().firebase);
 
-// // Create and Deploy Your First Cloud Functions
-// // https://firebase.google.com/docs/functions/write-firebase-functions
-
+// Create User
 exports.createUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
     admin.auth().createUser({
@@ -24,6 +22,7 @@ exports.createUser = functions.https.onRequest((request, response) => {
   });
 });
 
+// Delete User
 exports.deleteUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
     admin.auth().deleteUser(request.query.uid)
@@ -36,6 +35,7 @@ exports.deleteUser = functions.https.onRequest((request, response) => {
   });
 });
 
+// Update User
 exports.updateUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
     admin.auth().updateUser(request.query.uid, {
