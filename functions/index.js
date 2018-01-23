@@ -10,23 +10,24 @@ exports.createUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
     const tokenId = request.get('Authorization');
 
+    // Verify token
     admin.auth().verifyIdToken(tokenId)
-    .then(decodedToken => {
-      admin.auth().createUser({
-        email: request.query.email,
-        password: request.query.password,
-      })
-      .then(userRecord => {
-        response.send(userRecord);
-      })
-      .catch(error => {
-        response.message = 'mesage';
-        response.status(400).send('Error creating new user: ' + error);
+      .then( decodedToken => (
+
+        admin.auth().createUser({
+          email: request.query.email,
+          password: request.query.password,
+        })
+
+      )).then(userRecord => {
+
+        return response.send(userRecord);
+
+      }).catch(error => {
+
+        response.status(400).send(error);
+
       });
-    })
-    .catch(error => {
-      response.status(401).send('Error verifying token: ' + error);
-    });
   });
 });
 
@@ -36,23 +37,25 @@ exports.deleteUser = functions.https.onRequest((request, response) => {
     const tokenId = request.get('Authorization');
 
     admin.auth().verifyIdToken(tokenId)
-    .then(decodedToken => {
-      if (decodedToken.uid === request.query.uid) {
-        // Cannot delete current user;
-        response.status(403).send('Cannot delete current user');
-      } else {
-        admin.auth().deleteUser(request.query.uid)
-        .then(userRecord => {
-          response.send('Successfully deleted user');
-        })
-        .catch(error => {
-          response.status(400).send('Error deleting user: ' + error);
-        });
-      }
-    })
-    .catch(error => {
-      response.status(400).send('Error verifying token: ' + error);
-    });
+      .then(decodedToken => {
+
+        if (decodedToken.uid !== request.query.uid) {
+          return admin.auth().deleteUser(request.query.uid)
+        } else {
+          // Cannot delete current user;
+          return response.status(403).send('Cannot delete current user');
+        }
+
+      }).then(userRecord => {
+
+        return response.send('Successfully deleted user');
+
+      }).catch(error => {
+
+        return response.status(400).send(error);
+
+      });
+
   });
 });
 
@@ -62,20 +65,21 @@ exports.updateUser = functions.https.onRequest((request, response) => {
     const tokenId = request.get('Authorization');
 
     admin.auth().verifyIdToken(tokenId)
-    .then(decodedToken => {
-      admin.auth().updateUser(request.query.uid, {
-        email: request.query.email,
-        password: request.query.password
-      })
-      .then(userRecord => {
-        response.send('Successfully updated user');
-      })
-      .catch(error => {
-        response.status(400).send('Error updating user: ' + error);
+      .then(decodedToken => (
+
+        admin.auth().updateUser(request.query.uid, {
+          email: request.query.email,
+          password: request.query.password
+        })
+
+      )).then(userRecord => {
+
+        return response.send('Successfully updated user');
+
+      }).catch(error => {
+
+        return response.status(400).send(error);
+
       });
-    })
-    .catch(error => {
-      response.status(400).send('Error verifying token: ' + error);
-    });
   });
 });
