@@ -32,12 +32,25 @@ exports.createUser = functions.https.onRequest((request, response) => {
 // Delete User
 exports.deleteUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
-    admin.auth().deleteUser(request.query.uid)
-    .then(userRecord => {
-      response.send('Successfully deleted user');
+    const tokenId = request.get('Authorization');
+
+    admin.auth().verifyIdToken(tokenId)
+    .then(decodedToken => {
+      if (decodedToken.uid === request.query.uid) {
+        // Cannot delete current user;
+        response.status(403).send('Cannot delete current user');
+      } else {
+        admin.auth().deleteUser(request.query.uid)
+        .then(userRecord => {
+          response.send('Successfully deleted user');
+        })
+        .catch(error => {
+          response.status(400).send('Error deleting user:' + error);
+        });
+      }
     })
     .catch(error => {
-      response.send('Error deleting user:' + error);
+      response.status(400).send('Error verifying token:' + error);
     });
   });
 });
@@ -45,15 +58,23 @@ exports.deleteUser = functions.https.onRequest((request, response) => {
 // Update User
 exports.updateUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
-    admin.auth().updateUser(request.query.uid, {
-      email: request.query.email,
-      password: request.query.password
-    })
-    .then(userRecord => {
-      response.send('Successfully updated user');
+    const tokenId = request.get('Authorization');
+
+    admin.auth().verifyIdToken(tokenId)
+    .then(decodedToken => {
+      admin.auth().updateUser(request.query.uid, {
+        email: request.query.email,
+        password: request.query.password
+      })
+      .then(userRecord => {
+        response.send('Successfully updated user');
+      })
+      .catch(error => {
+        response.status(400).send('Error updating user:' + error);
+      });
     })
     .catch(error => {
-      response.send('Error updating user:' + error);
+      response.status(400).send('Error verifying token:' + error);
     });
   });
 });
