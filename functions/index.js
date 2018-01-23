@@ -20,11 +20,12 @@ exports.createUser = functions.https.onRequest((request, response) => {
         response.send(userRecord);
       })
       .catch(error => {
-        response.send('Error creating new user:' + error);
+        response.message = 'mesage';
+        response.status(400).send('Error creating new user: ' + error);
       });
     })
     .catch(error => {
-      response.send('Error verifying token:' + error);
+      response.status(401).send('Error verifying token: ' + error);
     });
   });
 });
@@ -45,12 +46,12 @@ exports.deleteUser = functions.https.onRequest((request, response) => {
           response.send('Successfully deleted user');
         })
         .catch(error => {
-          response.status(400).send('Error deleting user:' + error);
+          response.status(400).send('Error deleting user: ' + error);
         });
       }
     })
     .catch(error => {
-      response.status(400).send('Error verifying token:' + error);
+      response.status(400).send('Error verifying token: ' + error);
     });
   });
 });
@@ -70,11 +71,11 @@ exports.updateUser = functions.https.onRequest((request, response) => {
         response.send('Successfully updated user');
       })
       .catch(error => {
-        response.status(400).send('Error updating user:' + error);
+        response.status(400).send('Error updating user: ' + error);
       });
     })
     .catch(error => {
-      response.status(400).send('Error verifying token:' + error);
+      response.status(400).send('Error verifying token: ' + error);
     });
   });
 });
