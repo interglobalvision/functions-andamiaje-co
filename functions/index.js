@@ -8,16 +8,23 @@ admin.initializeApp(functions.config().firebase);
 // Create User
 exports.createUser = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
-    admin.auth().createUser({
-      email: request.query.email,
-      password: request.query.password,
-      uid: request.query.uid,
-    })
-    .then(userRecord => {
-      response.send(userRecord);
+    const tokenId = request.get('Authorization');
+
+    admin.auth().verifyIdToken(tokenId)
+    .then(decodedToken => {
+      admin.auth().createUser({
+        email: request.query.email,
+        password: request.query.password,
+      })
+      .then(userRecord => {
+        response.send(userRecord);
+      })
+      .catch(error => {
+        response.send('Error creating new user:' + error);
+      });
     })
     .catch(error => {
-      response.send('Error creating new user:' + error);
+      response.send('Error verifying token:' + error);
     });
   });
 });
