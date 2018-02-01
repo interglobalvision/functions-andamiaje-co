@@ -4,9 +4,10 @@ const cors = require('cors')({origin: true});
 // Thumbs stuff
 const gcs = require('@google-cloud/storage')();
 const sharp = require('sharp')
-const _ = require('lodash');
 const path = require('path');
 const os = require('os');
+
+const IMAGE_SIZES = require('./imageSizes');
 
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const admin = require('firebase-admin');
@@ -93,6 +94,7 @@ exports.updateUser = functions.https.onRequest((request, response) => {
 
 exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChange(event => {
 
+  console.log('EVENT', event);
   const object = event.data; // The Storage object.
 
   const fileBucket = object.bucket; // The Storage bucket that contains the file.
@@ -101,8 +103,6 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
   const resourceState = object.resourceState; // The resourceState is 'exists' or 'not_exists' (for file/folder deletions).
   const metageneration = object.metageneration; // Number of times metadata has been generated. New objects have a value of 1.
 
-  const SIZES = [300, 2800]; // Resize target width in pixels
-
   // Check mime type or if this is a move or deletion event
   if (!contentType.startsWith('image/') || resourceState === 'not_exists') {
     console.log('This is not an image.');
@@ -110,7 +110,7 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
   }
 
   // Check if this is an already proccesed image
-  if (_.includes(filePath, '_thumb')) {
+  if (filePath.includes('_thumb')) {
     console.log('already processed image');
     return;
   }
@@ -140,15 +140,16 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
       let imagePromises = [];
 
       // We iterate sizes
-      SIZES.forEach( size => {
+      IMAGE_SIZES.forEach( size => {
+        const { prefix, width, height } = size;
 
-        let newFileName = `${name}_${size}_thumb.${extension}`
+        let newFileName = `${name}_${prefix}_thumb.${extension}`
         let newFileTemp = path.join(os.tmpdir(), newFileName);
         let newFilePath = `uploads/${newFileName}`
 
         // We push promises to the array
         imagePromises.push( sharp(tempFilePath)
-          .resize(size, null)
+          .resize(width, height)
           .toFile(newFileTemp)
           .then( () => {
             // Upload to bucket
