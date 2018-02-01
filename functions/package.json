@@ -10,9 +10,11 @@
     "logs": "firebase functions:log"
   },
   "dependencies": {
+    "@google-cloud/storage": "^1.5.2",
     "cors": "^2.8.4",
     "firebase-admin": "^5.8.1",
-    "firebase-functions": "^0.8.1"
+    "firebase-functions": "^0.8.1",
+    "sharp": "^0.19.0"
   },
   "devDependencies": {
     "eslint": "^4.12.0",
