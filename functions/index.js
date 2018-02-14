@@ -3,9 +3,9 @@ const cors = require('cors')({origin: true});
 
 // Thumbs stuff
 const gcs = require('@google-cloud/storage')();
-const sharp = require('sharp')
 const path = require('path');
 const os = require('os');
+const spawn = require('child-process-promise').spawn;
 
 const IMAGE_SIZES = require('./imageSizes');
 
@@ -147,15 +147,23 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
         let newFileTemp = path.join(os.tmpdir(), newFileName);
         let newFilePath = `uploads/${newFileName}`
 
+        let params = [tempFilePath, '-resize', `${width}`, newFileTemp];
+
+        if (height !== undefined) {
+          params = [tempFilePath, '-resize', `${width}x${height}^`, '-gravity', 'center', '-crop', `${width}x${height}+0+0`, '+repage', newFileTemp];
+        }
+
         // We push promises to the array
-        imagePromises.push( sharp(tempFilePath)
-          .resize(width, height)
-          .toFile(newFileTemp)
+        imagePromises.push( spawn('convert', params, {capture: ['stdout', 'stderr']})
           .then( () => {
-            // Upload to bucket
-            return bucket.upload(newFileTemp, {
-              destination: newFilePath
-            });
+            console.log('generating: ', prefix, width, height);
+            //setTimeout( () => {
+              // Upload to bucket
+              return bucket.upload(newFileTemp, {
+                destination: newFilePath
+              });
+            //}, 4000);
+
           })
           .catch(error => console.error(error))
         );
