@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "igv-andamiaje-co"
+    "default": "igv-andamiaje-co",
+    "production": "prod-andamiaje-co"
   }
 }
