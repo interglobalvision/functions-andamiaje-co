@@ -25,3 +25,14 @@ yarn install
 Ex. testing `generateThumbnail()`
 
   `firebase experimental:functions:shell < test/generateThumbnail.js`
+
+
+## Changing enviroment
+
+```
+firebase use default # sets environment to the default alias (which is out staging area)
+firebase use production # sets environment to the production alias
+```
+
+For a single command, you can also specify the environment using the -P flag:
+`firebase deploy -P production # deploy to production alias`
