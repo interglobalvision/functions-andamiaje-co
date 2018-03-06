@@ -131,7 +131,7 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
   const file = bucket.file(filePath);
   const tempFilePath = path.join(os.tmpdir(), fileName);
 
-  return file
+  file
     .download({
       destination: tempFilePath
     })
@@ -167,4 +167,82 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
       return Promise.all(imagePromises);
     })
     .catch(error => console.error(error));
+});
+
+// Aquire Lote
+exports.aquireLote = functions.https.onRequest((request, response) => {
+  cors(request, response, () => {
+
+    // Get request params
+    const loteId = request.query.lote || null;
+    const tokenId = request.get('Authorization');
+
+    const Firebase = admin.database();
+
+    let uid;
+
+    // Check that loteId was passed
+    if(loteId !== null) {
+
+      // Ref to Firebase path for the specified lote
+      const FirebaseRef = Firebase.ref(`lotes/${loteId}`);
+
+      // Verify tokeId for security
+      admin.auth().verifyIdToken(tokenId)
+
+        .then(decodedToken => {
+
+          // If the user id was verified
+          if (decodedToken.uid) {
+
+            // Save the uid for later use
+            uid = decodedToken.uid;
+
+            // Request the lote once
+            return FirebaseRef.once('value');
+
+          } else {
+
+            // uid doesn't exist / couldn't be verified
+            return response.status(401).send('Not authorized');
+          }
+        })
+
+        .then( snapshot => {
+          // Get queried lote
+          const lote = snapshot.val();
+
+          //Check if lote doesn't have an owner
+          if(lote.owner === undefined) {
+
+            // Create owner object
+            let owner = {};
+            owner[uid] = true; // Use uid as key
+            owner['date'] = admin.database.ServerValue.TIMESTAMP; // Server timestamp
+
+            // Update lote with owner object
+            return FirebaseRef.update({owner});
+
+          } else { // Lote already has an owner
+            response.status(403).send('ya tiene dueño');
+          }
+        })
+
+        .then( () => {
+          // Respond with success
+          return response.send('Successfully aquired lote');
+        })
+
+        .catch(error => {
+          console.error('catch', error);
+          response.status(400).send(error);
+        });
+
+    } else { // loteId is empty
+      console.error('Lote not defined');
+      response.status(400).send('loteId is undefined');
+    }
+
+  })
+  ;
 });
