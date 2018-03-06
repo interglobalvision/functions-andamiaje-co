@@ -169,8 +169,8 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
     .catch(error => console.error(error));
 });
 
-// Aquire Lote
-exports.aquireLote = functions.https.onRequest((request, response) => {
+// acquire Lote
+exports.acquireLote = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
 
     // Get request params
@@ -230,7 +230,7 @@ exports.aquireLote = functions.https.onRequest((request, response) => {
 
         .then( () => {
           // Respond with success
-          return response.send('Successfully aquired lote');
+          return response.send('Successfully acquired lote');
         })
 
         .catch(error => {
