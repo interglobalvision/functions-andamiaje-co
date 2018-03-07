@@ -174,18 +174,28 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
   cors(request, response, () => {
 
     // Get request params
-    const loteId = request.query.lote || null;
+    const loteId = request.query.lote || undefined;
     const tokenId = request.get('Authorization');
-
-    const Firebase = admin.database();
 
     let uid;
 
     // Check that loteId was passed
-    if(loteId !== null) {
+    if(loteId === undefined) {
+
+      console.error('loteId is not defined');
+
+      return response.status(400).json({
+        error: 'loteId/undefined',
+      }).send('loteId is undefined');
+
+    } else {
+
+      const Firebase = admin.database();
 
       // Ref to Firebase path for the specified lote
       const FirebaseRef = Firebase.ref(`lotes/${loteId}`);
+
+      // TODO: Check for user available tokens
 
       // Verify tokeId for security
       admin.auth().verifyIdToken(tokenId)
@@ -204,7 +214,9 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           } else {
 
             // uid doesn't exist / couldn't be verified
-            return response.status(401).send('Not authorized');
+            return response.status(401).json({
+              error: 'unauthorized',
+            }).send('No puedes realizar esta acción');
           }
         })
 
@@ -224,7 +236,9 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
             return FirebaseRef.update({owner});
 
           } else { // Lote already has an owner
-            response.status(403).send('ya tiene dueño');
+            return response.status(409).json({
+              error: 'lote/has-owner',
+            }).send('Este lote ya fue adquirido');
           }
         })
 
@@ -234,15 +248,9 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
         })
 
         .catch(error => {
-          console.error('catch', error);
-          response.status(400).send(error);
+          return response.status(403).send('some error');
         });
 
-    } else { // loteId is empty
-      console.error('Lote not defined');
-      response.status(400).send('loteId is undefined');
     }
-
-  })
-  ;
+  });
 });
