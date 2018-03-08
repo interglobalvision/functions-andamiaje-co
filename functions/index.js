@@ -190,10 +190,12 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
 
     } else {
 
+      admin.database.enableLogging(true);
+
       const Firebase = admin.database();
 
       // Ref to Firebase path for the specified lote
-      const FirebaseRef = Firebase.ref(`lotes/${loteId}`);
+      const Lote = Firebase.ref(`lotes/${loteId}`);
 
       // TODO: Check for user available tokens
 
@@ -209,7 +211,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
             uid = decodedToken.uid;
 
             // Request the lote once
-            return FirebaseRef.once('value');
+            return Lote.once('value');
 
           } else {
 
@@ -233,7 +235,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
             owner['date'] = admin.database.ServerValue.TIMESTAMP; // Server timestamp
 
             // Update lote with owner object
-            return FirebaseRef.update({owner});
+            return Lote.update({owner});
 
           } else { // Lote already has an owner
             return response.status(409).json({
