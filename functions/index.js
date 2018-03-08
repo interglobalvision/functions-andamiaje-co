@@ -192,7 +192,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
 
     } else {
 
-      admin.database.enableLogging(true);
+      //admin.database.enableLogging(true);
 
       // Firebase
       const Firebase = admin.database();
