@@ -204,7 +204,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
       const Users = Firebase.ref('users');
 
       // Verify tokeId for security
-      admin.auth().verifyIdToken(tokenId)
+      return admin.auth().verifyIdToken(tokenId)
 
         .then(decodedToken => {
           console.log('Token Verified');
@@ -309,6 +309,13 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
 
           // Update user's remaining tokens
           return Users.child(uid).update({tokens});
+        })
+
+        .then( () => {
+          console.log('Adding Lote to User Collection');
+
+          // Add Lote to User's collection
+          return Users.child(`${uid}/collection/${loteId}`).set(true);
         })
 
         .catch(error => {
