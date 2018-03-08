@@ -307,7 +307,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           // Remaining tokens
           const tokens = user.tokens - lote.price;
 
-          // Respond with success
+          // Update user's remaining tokens
           return Users.child(uid).update({tokens});
         })
 
