@@ -311,12 +311,6 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           return Users.child(uid).update({tokens});
         })
 
-        .then( () => {
-          console.log('Price updated');
-          return;
-        })
-
-
         .catch(error => {
           console.log('ERROR');
           console.log(error);
