@@ -178,96 +178,149 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
     const tokenId = request.get('Authorization');
 
     let uid;
+    let user;
+    let lote;
+    let owner;
 
     // Check that loteId was passed
     if (loteId === undefined) {
 
-      console.error('loteId is not defined');
-
+      // Respond: loteId us undefined
       return response.status(400).json({
         error: 'loteId/undefined',
-      }).send('loteId is undefined');
+      });
 
     } else {
 
       admin.database.enableLogging(true);
 
+      // Firebase
       const Firebase = admin.database();
 
       // Ref to Firebase path for the specified lote
       const Lote = Firebase.ref(`lotes/${loteId}`);
-      const Users = Firebase.ref('users');
 
-      // TODO: Check for user available tokens
+      // Ref to Firebase path for users
+      const Users = Firebase.ref('users');
 
       // Verify tokeId for security
       admin.auth().verifyIdToken(tokenId)
 
         .then(decodedToken => {
+          console.log('Token Verified');
 
-          // If the user id was verified
-          if (decodedToken.uid) {
+          if (decodedToken.uid) { // If the user id was verified
 
             // Save the uid for later use
             uid = decodedToken.uid;
 
+            // Retrive User info
             return Users.child(uid).once('value');
 
           } else {
 
-            // uid doesn't exist / couldn't be verified
+            // Respond: uid doesn't exist / couldn't be verified
             return response.status(401).json({
               error: 'unauthorized',
-            }).send('No puedes realizar esta acción');
+            });
+
           }
         })
 
         .then( snapshot => {
+          console.log('User retrived');
 
           // Save User info
           user = snapshot.val();
 
-          if (user.role !== 'member') {
-            // uid doesn't exist / couldn't be verified
+          if (user.role !== 'member') { // Check if user is Member
+
+            // Respond: User not a member
             return response.status(401).json({
               error: 'unauthorized',
-            }).send('No puedes realizar esta acción');
+            });
+
           }
 
-          // Request the lote once
+          // Request the Lote info
           return Lote.once('value');
 
         })
 
         .then( snapshot => {
+          console.log('Lote retrived');
+
           // Get queried lote
-          const lote = snapshot.val();
+          lote = snapshot.val();
 
-          //Check if lote has an owner
-          if (lote.owner !== undefined) {
+          if (lote.owner !== undefined) { //Check if lote has an owner
+            console.log('Lote not defined');
 
+            // Respond: Lote as an owner
             return response.status(409).json({
               error: 'lote/has-owner',
-            }).send('Este lote ya fue adquirido');
+            });
 
-          } else { // Lote already has an owner
-            // Create owner object
-            let owner = {};
-            owner[uid] = true; // Use uid as key
-            owner['date'] = admin.database.ServerValue.TIMESTAMP; // Server timestamp
+
+          } else if (lote.price > user.tokens) {  // Check if user has enough tokens
+            console.log('Too Expensive');
+
+            // Repond: Too expensive
+            return response.status(409).json({
+              error: 'lote/too-expensive',
+            });
+
+          } else { // Is good to go
+            console.log('OK, we good');
+
+            // Owner Name
+            const name = user.displayName !== '' ? user.displayName : user.name;
+
+            // Acquisition Date
+            const date = admin.database.ServerValue.TIMESTAMP; // Server timestamp
+
+            // Set owner var
+            owner =  {
+              uid,
+              name,
+              date,
+            };
 
             // Update lote with owner object
-            return Lote.update({owner});
+            return Lote.update({ owner });
           }
         })
 
         .then( () => {
-          // Respond with success
-          return response.send('Successfully acquired lote');
+          console.log('Lote acquired');
+
+          // Respond with success and return owner data
+          return response.status(200).json({
+            owner,
+          });
+
         })
 
+        .then( () => {
+          console.log('Updating tokens');
+
+          // Remaining tokens
+          const tokens = user.tokens - lote.price;
+
+          // Respond with success
+          return Users.child(uid).update({tokens});
+        })
+
+        .then( () => {
+          console.log('Price updated');
+          return;
+        })
+
+
         .catch(error => {
-          return response.status(403).send('some error');
+          console.log('ERROR');
+          console.log(error);
+          return response.status(403).data(error);
         });
 
     }
