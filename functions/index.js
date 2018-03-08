@@ -180,7 +180,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
     let uid;
 
     // Check that loteId was passed
-    if(loteId === undefined) {
+    if (loteId === undefined) {
 
       console.error('loteId is not defined');
 
@@ -196,6 +196,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
 
       // Ref to Firebase path for the specified lote
       const Lote = Firebase.ref(`lotes/${loteId}`);
+      const Users = Firebase.ref('users');
 
       // TODO: Check for user available tokens
 
@@ -210,8 +211,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
             // Save the uid for later use
             uid = decodedToken.uid;
 
-            // Request the lote once
-            return Lote.once('value');
+            return Users.child(uid).once('value');
 
           } else {
 
@@ -223,12 +223,34 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
         })
 
         .then( snapshot => {
+
+          // Save User info
+          user = snapshot.val();
+
+          if (user.role !== 'member') {
+            // uid doesn't exist / couldn't be verified
+            return response.status(401).json({
+              error: 'unauthorized',
+            }).send('No puedes realizar esta acción');
+          }
+
+          // Request the lote once
+          return Lote.once('value');
+
+        })
+
+        .then( snapshot => {
           // Get queried lote
           const lote = snapshot.val();
 
-          //Check if lote doesn't have an owner
-          if(lote.owner === undefined) {
+          //Check if lote has an owner
+          if (lote.owner !== undefined) {
 
+            return response.status(409).json({
+              error: 'lote/has-owner',
+            }).send('Este lote ya fue adquirido');
+
+          } else { // Lote already has an owner
             // Create owner object
             let owner = {};
             owner[uid] = true; // Use uid as key
@@ -236,11 +258,6 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
 
             // Update lote with owner object
             return Lote.update({owner});
-
-          } else { // Lote already has an owner
-            return response.status(409).json({
-              error: 'lote/has-owner',
-            }).send('Este lote ya fue adquirido');
           }
         })
 
