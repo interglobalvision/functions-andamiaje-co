@@ -186,9 +186,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
     if (loteId === undefined) {
 
       // Respond: loteId us undefined
-      return response.status(400).json({
-        error: 'loteId/undefined',
-      });
+      throw new Error('loteId/undefined');
 
     } else {
 
@@ -220,9 +218,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           } else {
 
             // Respond: uid doesn't exist / couldn't be verified
-            return response.status(401).json({
-              error: 'unauthorized',
-            });
+            throw new Error('unauthorized');
 
           }
         })
@@ -236,10 +232,7 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           if (user.role !== 'member') { // Check if user is Member
 
             // Respond: User not a member
-            return response.status(401).json({
-              error: 'unauthorized',
-            });
-
+            throw new Error('unauthorized');
           }
 
           // Request the Lote info
@@ -254,21 +247,16 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           lote = snapshot.val();
 
           if (lote.owner !== undefined) { //Check if lote has an owner
-            console.log('Lote not defined');
+            console.log('Lote has owner');
 
             // Respond: Lote as an owner
-            return response.status(409).json({
-              error: 'lote/has-owner',
-            });
-
+            throw new Error('lote/has-owner');
 
           } else if (lote.price > user.tokens) {  // Check if user has enough tokens
             console.log('Too Expensive');
 
             // Repond: Too expensive
-            return response.status(409).json({
-              error: 'lote/too-expensive',
-            });
+            throw new Error('lote/too-expensive');
 
           } else { // Is good to go
             console.log('OK, we good');
@@ -286,8 +274,31 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
               date,
             };
 
-            // Update lote with owner object
-            return Lote.update({ owner });
+            // Update lote with owner object using a transcation
+            // More on transcactions here:
+            // https://firebase.google.com/docs/reference/node/firebase.database.Reference#transaction
+            return Firebase.ref(`lotes/${loteId}/owner`).transaction( intendedOwner => {
+              // If lote doesn't have an owner
+              if(intendedOwner === null) {
+                return owner; // Add owner
+              }
+
+              // else: return nothing which aka abort the transacation
+            },
+            (error, committed, snapshot) => { // Callback
+              if (error) {
+                console.log('Transaction failed abnormally!', error);
+                throw new Error(error);
+              } else if (!committed) {
+                console.log('We aborted the transaction (because owner already exists).');
+                throw new Error('lote/has-owner');
+              } else {
+                console.log('Owner added!');
+              }
+              console.log('Owners data', snapshot.val());
+
+            },
+            true);
           }
         })
 
@@ -319,9 +330,40 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
         })
 
         .catch(error => {
-          console.log('ERROR');
-          console.log(error);
-          return response.status(403).data(error);
+
+          let status = 400;
+
+          if(error.message) {
+
+            switch (error.message) {
+              case 'loteId/undefined':
+                status = 400;
+                break;
+              case 'lote/has-owner':
+                status = 409;
+                break;
+              case 'lote/too-expensive':
+                status = 409;
+                break;
+              case 'unauthorized':
+                status = 401;
+                break;
+              default:
+                status = 403;
+                break;
+            }
+
+            return response
+              .status(status)
+              .json({
+                error: error.message,
+              });
+          }
+
+          console.log('ERROR', error.message);
+
+          return response.status(status);
+
         });
 
     }
