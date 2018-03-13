@@ -274,15 +274,18 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
               date,
             };
 
-            // Update lote with owner object
+            // Update lote with owner object using a transcation
+            // More on transcactions here:
+            // https://firebase.google.com/docs/reference/node/firebase.database.Reference#transaction
             return Firebase.ref(`lotes/${loteId}/owner`).transaction( intendedOwner => {
-              console.log('intending', intendedOwner);
-
+              // If lote doesn't have an owner
               if(intendedOwner === null) {
-                return owner;
+                return owner; // Add owner
               }
+
+              // else: return nothing which aka abort the transacation
             },
-            (error, committed, snapshot) => {
+            (error, committed, snapshot) => { // Callback
               if (error) {
                 console.log('Transaction failed abnormally!', error);
                 throw new Error(error);
@@ -331,7 +334,6 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
           let status = 400;
 
           if(error.message) {
-            console.log('ERROR', error.message);
 
             switch (error.message) {
               case 'loteId/undefined':
@@ -351,14 +353,16 @@ exports.acquireLote = functions.https.onRequest((request, response) => {
                 break;
             }
 
+            return response
+              .status(status)
+              .json({
+                error: error.message,
+              });
           }
 
-          return response
-            //.setHeader('Content-Type', 'application/json')
-            .status(status)
-            .json({
-              error: error.message,
-            });
+          console.log('ERROR', error.message);
+
+          return response.status(status);
 
         });
 
