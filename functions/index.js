@@ -92,10 +92,10 @@ exports.updateUser = functions.https.onRequest((request, response) => {
   });
 });
 
-exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChange(event => {
+exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onFinalize((object, context) => {
 
-  console.log('EVENT', event);
-  const object = event.data; // The Storage object.
+  console.log('OBJECT', object);
+  console.log('CONTEXT', context);
 
   const fileBucket = object.bucket; // The Storage bucket that contains the file.
   const filePath = object.name; // File path in the bucket.
@@ -103,8 +103,14 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
   const resourceState = object.resourceState; // The resourceState is 'exists' or 'not_exists' (for file/folder deletions).
   const metageneration = object.metageneration; // Number of times metadata has been generated. New objects have a value of 1.
 
-  // Check mime type or if this is a move or deletion event
-  if (!contentType.startsWith('image/') || resourceState === 'not_exists') {
+  // Check if this is a move or deletion event
+  if (resourceState === 'not_exists') {
+    console.log('This is a file deletion');
+    return;
+  }
+
+  // Check mime type
+  if (!contentType.startsWith('image/')) {
     console.log('This is not an image.');
     return;
   }
@@ -136,6 +142,7 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
       destination: tempFilePath
     })
     .then(() => {
+      console.log('Image downloaded');
       // Array used to store promises
       let imagePromises = [];
 
@@ -153,11 +160,15 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
           .toFile(newFileTemp)
           .then( () => {
             // Upload to bucket
+            console.log('Uploading thumb', width, height, newFilePath);
             return bucket.upload(newFileTemp, {
               destination: newFilePath
             });
           })
-          .catch(error => console.error(error))
+          .then(() => {
+            console.log('All uploaded');
+          })
+          .catch(error => console.log(error))
         );
 
       });
@@ -166,7 +177,7 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onChan
       // until all promises are resolved
       return Promise.all(imagePromises);
     })
-    .catch(error => console.error(error));
+    .catch(error => console.log(error));
 });
 
 // acquire Lote
