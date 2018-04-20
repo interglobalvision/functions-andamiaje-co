@@ -106,19 +106,19 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onFina
   // Check if this is a move or deletion event
   if (resourceState === 'not_exists') {
     console.log('This is a file deletion');
-    return;
+    return false;
   }
 
   // Check mime type
   if (!contentType.startsWith('image/')) {
     console.log('This is not an image.');
-    return;
+    return false;
   }
 
   // Check if this is an already proccesed image
   if (filePath.includes('_thumb')) {
     console.log('already processed image');
-    return;
+    return false;
   }
 
   /*
@@ -137,12 +137,13 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onFina
   const file = bucket.file(filePath);
   const tempFilePath = path.join(os.tmpdir(), fileName);
 
-  file
+  return file
     .download({
       destination: tempFilePath
     })
     .then(() => {
       console.log('Image downloaded');
+
       // Array used to store promises
       let imagePromises = [];
 
@@ -165,8 +166,9 @@ exports.generateThumbnail = functions.storage.object('uploads/{imageId}').onFina
               destination: newFilePath
             });
           })
-          .then(() => {
-            console.log('All uploaded');
+          .then( res => {
+            console.log('All uploaded', res);
+            return true;
           })
           .catch(error => console.log(error))
         );
